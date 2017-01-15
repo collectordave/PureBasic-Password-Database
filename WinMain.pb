@@ -103,6 +103,7 @@ Procedure ClearGadgets()
   
   SetGadgetText(#strService,"")
   SetGadgetText(#strPassword,"") 
+  SetGadgetText(#strUserName,"")
   
 EndProcedure
 
@@ -258,13 +259,18 @@ EndProcedure
 Procedure AddPassword()
   
   Define NewService.s,NewUserName.s,NewPassword.s,Criteria.s
-  
-  NewService = GetGadgetText(#strService)
-  NewUserName = GetGadgetText(#strUserName) 
-  NewPassword = Encrypt(GetGadgetText(#strPassword),MainPassword)
+  If StringByteLength(GetGadgetText(#strPassword)) <= 32
     
-  Criteria = "INSERT INTO Service (PDBService,PDBUserName,PDBPassword) VALUES ('" + NewService + "','" + NewPassword + "');"
-  DatabaseUpdate(App::PasswordDB, Criteria) 
+    NewService = GetGadgetText(#strService)
+    NewUserName = GetGadgetText(#strUserName) 
+    NewPassword = Encrypt(GetGadgetText(#strPassword),MainPassword)
+    
+    Criteria = "INSERT INTO Service (PDBService,PDBUserName,PDBPassword) VALUES ('" + NewService + "','" + NewUserName + "','" + NewPassword + "');"
+    DatabaseUpdate(App::PasswordDB, Criteria) 
+  Else
+  
+    MessageRequester("Password DB","Password is to long please retype",#PB_MessageRequester_Ok|#PB_MessageRequester_Info)
+  EndIf
   
 EndProcedure
 
@@ -272,12 +278,19 @@ Procedure SavePassword()
   
   Define NewService.s,NewUserName.s,NewPassword.s,Criteria.s
   
-  NewService = GetGadgetText(#strService)
-  NewUserName = GetGadgetText(#strUserName) 
-  NewPassword = Encrypt(GetGadgetText(#strPassword),MainPassword)
+  If StringByteLength(GetGadgetText(#strPassword)) <= 32
     
-  Criteria = "UPDATE Service SET PDBService = '" + NewService + "',PDBPassword ='" + NewPassword + "' WHERE PDBID = " + Str(CurrentID) + ";"
-  DatabaseUpdate(App::PasswordDB, Criteria) 
+    NewService = GetGadgetText(#strService)
+    NewUserName = GetGadgetText(#strUserName) 
+    NewPassword = Encrypt(GetGadgetText(#strPassword),MainPassword)
+    Criteria = "UPDATE Service SET PDBService = '" + NewService + "',PDBPassword ='" + NewPassword + "' WHERE PDBID = " + Str(CurrentID) + ";"
+    DatabaseUpdate(App::PasswordDB, Criteria)
+    
+  Else
+  
+    MessageRequester("Password DB","Password is to long please retype",#PB_MessageRequester_Ok|#PB_MessageRequester_Info)
+  
+  EndIf
   
 EndProcedure
 
@@ -309,6 +322,7 @@ Procedure DisplayRecord()
   EndIf 
   
 EndProcedure
+
 
 CatchImage(#imgFirst,?First)
 CatchImage(#imgPrevious,?Previous)
@@ -370,7 +384,7 @@ Repeat
     Case #PB_Event_Gadget
         
       Select EventGadget()
-            
+
         Case #btnFirst
           
           CurrentRow = 1
@@ -479,6 +493,7 @@ DataSection
   Data.a $3d, $af, $ba, $42, $9d, $9e, $b4, $30, $b4, $22, $da, $80, $2c, $9f, $ac, $41
 EndDataSection 
 ; IDE Options = PureBasic 5.51 (Windows - x64)
-; CursorPosition = 8
-; Folding = Bw
+; CursorPosition = 290
+; FirstLine = 89
+; Folding = Cw
 ; EnableXP
