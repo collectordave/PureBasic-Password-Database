@@ -82,6 +82,8 @@ LangImage = Locale::GetImageFromDB(App::Language)
 MainPassword = Password::Open()
 If Len(MainPassword) = 0
   End
+Else 
+  MainPassword = "Bye"
 EndIf
 
 Procedure ShowFormTexts()
@@ -535,7 +537,7 @@ DataSection
   Data.a $3d, $af, $ba, $42, $9d, $9e, $b4, $30, $b4, $22, $da, $80, $2c, $9f, $ac, $41
 EndDataSection 
 ; IDE Options = PureBasic 5.60 beta 6 (Windows - x64)
-; CursorPosition = 368
-; FirstLine = 142
+; CursorPosition = 85
+; FirstLine = 69
 ; Folding = Aw
 ; EnableXP

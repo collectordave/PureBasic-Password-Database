@@ -84,11 +84,15 @@ Procedure.s Open()
          
             CheckPassword = Encrypt(GetGadgetText(#strPassword), GetGadgetText(#strPassword))
             If CheckPassword = MainPassword 
+              CheckPassword = "Bye"
+              SetGadgetText(#strPassword,"Bye")
               Quit = #True
-              retVal = GetGadgetText(#strPassword)
+              retVal = "Bye"
               CloseWindow(#winPassword)
               
             Else
+              CheckPassword = "Bye"  
+              SetGadgetText(#strPassword,"Bye")
               Quit = #True
               MessageRequester(Locale::TranslatedString(97),"Incorrect Password",#PB_MessageRequester_Ok|#PB_MessageRequester_Error)
               retval = ""
@@ -113,7 +117,7 @@ EndModule
 
 
 ; IDE Options = PureBasic 5.60 beta 6 (Windows - x64)
-; CursorPosition = 45
-; FirstLine = 30
+; CursorPosition = 86
+; FirstLine = 78
 ; Folding = -
 ; EnableXP
