@@ -50,22 +50,27 @@ Enumeration MainForm
   #btnLast
   #imgLast
   #imgAdd
+  #imgEdit
   #imgDelete
   #imgExit
   #imgHelp
   #imgOk
+  #imgCancel
   #Idle
   #Add
+  #StatusFont
 EndEnumeration
 
 ;Global Variables
-Global IconBar.i,LangImage.i
+Global MainIconBar.i,EditIconBar.i,LangImage.i
+Global Mode.s
 
 ;Database Variables
 Global CurrentRow.i,TotalRows.i,CurrentID.i
 
 Global MainPassword.s = ""
 
+LoadFont(#StatusFont,"Comic Sans MS", 16, #PB_Font_Italic)
 
 ;local variables
 Define Event.i,TempCriteria.s
@@ -84,13 +89,13 @@ Procedure ShowFormTexts()
   ;Window Title
   SetWindowTitle(#WinMain,Locale::TranslatedString(97))
   
-  ;Iconbar
-  SetIconBarGadgetItemText(IconBar,Locale::TranslatedString(101),0,#IconBarText_ToolTip)
-  SetIconBarGadgetItemText(IconBar,Locale::TranslatedString(102),1,#IconBarText_ToolTip)
-  SetIconBarGadgetItemText(IconBar,Locale::TranslatedString(21),2,#IconBarText_ToolTip)
-  SetIconBarGadgetItemText(IconBar,Locale::TranslatedString(16),3,#IconBarText_ToolTip) 
-  SetIconBarGadgetItemText(IconBar,Locale::TranslatedString(107),4,#IconBarText_ToolTip)
-  SetIconBarGadgetItemText(IconBar,Locale::TranslatedString(58),5,#IconBarText_ToolTip) 
+  ;MainIconBar
+  SetIconBarGadgetItemText(MainIconBar,Locale::TranslatedString(101),0,#IconBarText_ToolTip)
+  SetIconBarGadgetItemText(MainIconBar,Locale::TranslatedString(102),1,#IconBarText_ToolTip)
+  SetIconBarGadgetItemText(MainIconBar,Locale::TranslatedString(21),2,#IconBarText_ToolTip)
+  SetIconBarGadgetItemText(MainIconBar,Locale::TranslatedString(16),3,#IconBarText_ToolTip) 
+  SetIconBarGadgetItemText(MainIconBar,Locale::TranslatedString(107),4,#IconBarText_ToolTip)
+  SetIconBarGadgetItemText(MainIconBar,Locale::TranslatedString(58),5,#IconBarText_ToolTip) 
   
   ;Gadgets
   SetGadgetText(#txtService,Locale::TranslatedString(103))
@@ -130,20 +135,7 @@ Procedure.s Encrypt(text$, password$)
         *outAES = AllocateMemory(Length)
         If *outAES
           If AESEncoder(*inAES, *outAES, Length, *KeyAES, 256, ?InitializationVector)
-           
-            Size64 = Length * 1.35
-            If Size64 < 64
-              Size64 = 64
-            EndIf
-            *out64 = AllocateMemory(Size64)
-            If *out64
-              Size64 = Base64Encoder(*outAES, Length, *out64, Size64)
-              If Size64
-                e$ = PeekS(*out64, Size64, #PB_Ascii)
-              EndIf
-              FreeMemory(*out64)
-            EndIf
-           
+             e$ = Base64Encoder(*outAES, Length)           
           EndIf
           FreeMemory(*outAES)
         EndIf
@@ -175,8 +167,7 @@ Procedure.s Decrypt(text$, password$)
        
         *out64 = AllocateMemory(MemorySize(*in64))
         If *out64
-          Length = Base64Decoder(*in64, MemorySize(*in64), *out64, MemorySize(*out64))
-
+          Length = Base64DecoderBuffer(*in64, MemorySize(*in64), *out64, MemorySize(*out64))
           *outAES = AllocateMemory(Length)
           If *outAES
             If AESDecoder(*out64, *outAES, Length, *KeyAES, 256, ?InitializationVector)
@@ -231,7 +222,15 @@ Procedure CheckRecords()
     DisableGadget(#btnPrevious, 0) ;Can move to previous record
     
   EndIf
-
+  
+  If TotalRows = 0
+    SetGadgetText(#txtStatus,"No Passwords Found")
+  Else
+    SetGadgetText(#txtStatus,Str(CurrentRow) +" Of " + Str(TotalRows)) 
+  EndIf
+  
+  
+  
 EndProcedure
 
 Procedure GetTotalRecords()
@@ -283,7 +282,7 @@ Procedure SavePassword()
     NewService = GetGadgetText(#strService)
     NewUserName = GetGadgetText(#strUserName) 
     NewPassword = Encrypt(GetGadgetText(#strPassword),MainPassword)
-    Criteria = "UPDATE Service SET PDBService = '" + NewService + "',PDBPassword ='" + NewPassword + "' WHERE PDBID = " + Str(CurrentID) + ";"
+    Criteria = "UPDATE Service SET PDBService = '" + NewService + "',PDBPassword ='" + NewPassword + "', PDBUserName ='" + NewUserName + "' WHERE PDBID = " + Str(CurrentID) + ";"
     DatabaseUpdate(App::PasswordDB, Criteria)
     
   Else
@@ -332,21 +331,31 @@ CatchImage(#imgAdd,?ToolBarAdd)
 CatchImage(#imgDelete,?ToolBarDelete)
 CatchImage(#imgExit,?ToolBarExit)
 CatchImage(#imgHelp,?ToolBarHelp)
+CatchImage(#imgEdit,?ToolBarEdit)
 CatchImage(#imgOk,?ToolBarOk)
+CatchImage(#imgCancel,?ToolBarCancel)
 
 ;Main Window
 OpenWindow(#WinMain, 0, 0, 490, 145, "", #PB_Window_SystemMenu|#PB_Window_ScreenCentered)
 
-IconBar = IconBarGadget(0, 0, WindowWidth(#WinMain),20,#IconBar_Default,#WinMain) 
-AddIconBarGadgetItem(IconBar, "", #imgAdd)
-AddIconBarGadgetItem(IconBar, "", #imgOk)
-AddIconBarGadgetItem(IconBar, "", #imgDelete)
-AddIconBarGadgetItem(IconBar, "", #imgExit)
-IconBarGadgetSpacer(IconBar)
-AddIconBarGadgetItem(IconBar, "", LangImage)
-AddIconBarGadgetItem(IconBar, "", #imgHelp)
-ResizeIconBarGadget(IconBar, #PB_Ignore, #IconBar_Auto)  
-SetIconBarGadgetColor(IconBar, 1, RGB(176,224,230))
+MainIconBar = IconBarGadget(0, 0, WindowWidth(#WinMain),20,#IconBar_Default,#WinMain) 
+AddIconBarGadgetItem(MainIconBar, "", #imgAdd)
+AddIconBarGadgetItem(MainIconBar, "", #imgEdit)
+AddIconBarGadgetItem(MainIconBar, "", #imgDelete)
+AddIconBarGadgetItem(MainIconBar, "", #imgExit)
+IconBarGadgetSpacer(MainIconBar)
+AddIconBarGadgetItem(MainIconBar, "", LangImage)
+AddIconBarGadgetItem(MainIconBar, "", #imgHelp)
+ResizeIconBarGadget(MainIconBar, #PB_Ignore, #IconBar_Auto)  
+SetIconBarGadgetColor(MainIconBar, 1, RGB(176,224,230))
+
+EditIconBar = IconBarGadget(0, 0, WindowWidth(#WinMain),20,#IconBar_Default,#WinMain) 
+AddIconBarGadgetItem(EditIconBar, "", #imgOk)
+AddIconBarGadgetItem(EditIconBar, "", #imgCancel)
+ResizeIconBarGadget(EditIconBar, #PB_Ignore, #IconBar_Auto)  
+SetIconBarGadgetColor(EditIconBar, 1, RGB(176,224,230))
+HideIconBarGadget(EditIconBar,#True)
+
 TextGadget(#txtService, 10, 50, 150, 20, "", #PB_Text_Center)
 StringGadget(#strService, 10, 80, 150, 20, "")
 TextGadget(#txtUserName, 170, 50, 150, 20, "", #PB_Text_Center)
@@ -359,14 +368,21 @@ ButtonImageGadget(#btnFirst, 0, 110, 32, 32, ImageID(#imgFirst))
 ButtonImageGadget(#btnPrevious, 31, 110, 32, 32, ImageID(#imgPrevious))
 ButtonImageGadget(#btnNext, 426, 110, 32, 32, ImageID(#imgNext))
 ButtonImageGadget(#btnLast, 458, 110, 32, 32, ImageID(#imgLast))
+TextGadget(#txtStatus, 66, 110, 358, 32, "No Passwords Found", #PB_Text_Center)
 
 ;Move window to centre screen at the top
 ResizeWindow(#WinMain,#PB_Ignore,5,#PB_Ignore,#PB_Ignore)
 
+;Set status text Font
+SetGadgetFont(#txtStatus,FontID(#StatusFont))
+
 ShowFormTexts()
+
+Mode = "Idle"
 
 ;Open The Password Database
 App::PasswordDB = OpenDatabase(#PB_Any,"Passwords.db","","")
+CurrentRow = 1
 GetTotalrecords()
 CheckRecords()
 ClearGadgets()
@@ -413,25 +429,21 @@ Repeat
           CheckRecords()
           DisplayRecord()
           
-        Case IconBar ;Toolbar event
+        Case MainIconBar  ;Main Toolbar event
              
           Select EventData() ;For each button on toolbar
               
             Case 0
               
-              AddPassword()
-              ClearGadgets()
-              GetTotalRecords()
-              CheckRecords()
-              DisplayRecord()
+              Mode = "Add"
+              HideIconBarGadget(MainIconBar,#True)
+              HideIconBarGadget(EditIconBar,#False)
               
            Case 1
-              
-              SavePassword()
-              ClearGadgets()
-              GetTotalRecords()
-              CheckRecords()
-              DisplayRecord()
+             
+             Mode = "Edit"
+             HideIconBarGadget(MainIconBar,#True)
+             HideIconBarGadget(EditIconBar,#False)
               
             Case 2
               
@@ -458,10 +470,38 @@ Repeat
                 
             Case 5
               
-              ;Debug Locale::TranslatedString(58) Help
+              ;Debug Locale::TranslatedString(58) ;Help
               
           EndSelect           
-            
+          
+        Case EditIconBar ;Edit Toolbar event
+             
+          Select EventData() ;For each button on toolbar
+              
+            Case 0
+              
+              If Mode = "Add"
+                AddPassword()
+              ElseIf Mode = "Edit"
+                SavePassword()
+              EndIf
+              HideIconBarGadget(MainIconBar,#False)
+              HideIconBarGadget(EditIconBar,#True)           
+              ClearGadgets()
+              GetTotalRecords()
+              CheckRecords()
+              DisplayRecord()
+              
+            Case 1
+             
+              Mode = "Idle"
+              HideIconBarGadget(MainIconBar,#False)
+              HideIconBarGadget(EditIconBar,#True)               
+              DisplayRecord()            
+          
+          EndSelect
+          
+          
       EndSelect  
         
   EndSelect
@@ -483,8 +523,10 @@ DataSection
     IncludeBinary "delete.png" 
   ToolBarExit:
     IncludeBinary "Exit.png"  
+  ToolBarEdit:
+    IncludeBinary "Edit.png"
   ToolBarOk:
-    IncludeBinary "Ok.png" 
+    IncludeBinary "Ok.png"  
   ToolBarCancel:
     IncludeBinary "Cancel.png"  
   ToolBarHelp:
@@ -492,8 +534,8 @@ DataSection
   InitializationVector:
   Data.a $3d, $af, $ba, $42, $9d, $9e, $b4, $30, $b4, $22, $da, $80, $2c, $9f, $ac, $41
 EndDataSection 
-; IDE Options = PureBasic 5.51 (Windows - x64)
-; CursorPosition = 290
-; FirstLine = 89
-; Folding = Cw
+; IDE Options = PureBasic 5.60 beta 6 (Windows - x64)
+; CursorPosition = 368
+; FirstLine = 142
+; Folding = Aw
 ; EnableXP

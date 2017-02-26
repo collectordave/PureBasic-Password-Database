@@ -41,20 +41,7 @@ Procedure.s Encrypt(text$, password$)
         *outAES = AllocateMemory(Length)
         If *outAES
           If AESEncoder(*inAES, *outAES, Length, *KeyAES, 256, ?InitializationVector)
-           
-            Size64 = Length * 1.35
-            If Size64 < 64
-              Size64 = 64
-            EndIf
-            *out64 = AllocateMemory(Size64)
-            If *out64
-              Size64 = Base64Encoder(*outAES, Length, *out64, Size64)
-              If Size64
-                e$ = PeekS(*out64, Size64, #PB_Ascii)
-              EndIf
-              FreeMemory(*out64)
-            EndIf
-           
+             e$ = Base64Encoder(*outAES, Length)           
           EndIf
           FreeMemory(*outAES)
         EndIf
@@ -125,8 +112,8 @@ EndDataSection
 EndModule
 
 
-; IDE Options = PureBasic 5.51 (Windows - x64)
-; CursorPosition = 75
-; FirstLine = 12
-; Folding = 8
+; IDE Options = PureBasic 5.60 beta 6 (Windows - x64)
+; CursorPosition = 45
+; FirstLine = 30
+; Folding = -
 ; EnableXP
